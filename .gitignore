@@ -1,0 +1,8 @@
+# Local Claude/PMT settings (machine-specific UUIDs)
+.claude/settings.local.json
+
+.env
+.env.*
+node_modules/
+__pycache__/
+*.log
