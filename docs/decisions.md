@@ -63,12 +63,19 @@ j-mail만의 설계 결정을 적는다. 제품군 공통 결정은 [`j-groupwar
 - **결정:** Mailpit은 메일 계정·IMAP이 없어 mail 인증을 제공하지 않는다. j-messenger의 mail 모드는 코드 변경 없이 두고, 실제 MTA 기반 연결은 backlog다.
 - **이유:** j-messenger 변경 범위를 늘리지 않는다.
 
+### 결정 10. 새 메일 알림 송신
+- **결정:**
+  - Mailpit 새 메일 webhook(옵션명은 공식 문서로 확인)을 j-mail 서버 loopback 엔드포인트로 받는다.
+  - 수신자 주소가 `<username>@<tenant>.jgw.test`인 메일마다 j-groupware 알림 센터(S17)에 `mail.new`를 보낸다. 받는 사람은 `usernames: [username]`이다. 그 회원에게 `mail:read`가 있을 때만 j-groupware가 보여 준다.
+  - 알림 기록은 `jgw_mail`의 `notification_outbox`에 두고 송신 루프가 재시도한다(`dedupKey` = Mailpit 메일 id). 이것이 `jgw_mail`의 첫 실제 사용처다.
+- **이유:** 새 메일을 j-groupware 알림으로 알 수 있다.
+
 ## 3. 데이터·검증·배포
 
 ### 결정 8. j-mail DB
 - **결정:**
   - 고객 서버 PostgreSQL에 database `jgw_mail`과 전용 계정을 둔다(S2).
-  - 지금은 저장할 상태가 없으므로 골격(빈 baseline 마이그레이션)만 두고, 기동할 때 접속을 확인한다. 사용자별 필터·보존 정책·열람 기록이 생기면 여기에 둔다.
+  - 첫 사용처는 알림 outbox(결정 10)다. 사용자별 필터·보존 정책이 생기면 여기에 둔다.
   - Mailpit 내부 저장소는 외부 제품의 저장 방식이라 예외로 두고, 버전 고정 Compose 볼륨에 둔다.
 - **이유:** 가입·해지·백업 절차를 모든 서비스에서 같게 한다(S2, 사용자).
 
@@ -91,10 +98,11 @@ PMT 통합 project 분류 `j-mail`.
 | E3 받은편지함 API·권한 게이트 | contracts(목록·상세, 오류 코드, 레지스트리 게시), `@j-auth/contracts` 설치, 결정 5 검증·tenant 필터·Mailpit 래핑 | E1, j-auth I2·I4 |
 | E5 완료 기준 테스트 | 실제 의존성 Vitest: 내부 메일 발송 → API 목록·상세, 외부 거부, tenant 격리, 401·403, 503 | E2, E3, j-auth I6 |
 | E7 고객 서버 검증 | `provision-service`로 설치·해지(Mailpit 중지·볼륨 백업), systemd·내부 포트, egress 차단, j-groupware 메일 화면 확인, VM 대상 E5 | E5, j-groupware G10·G14·G18 |
+| E8 알림 송신 | 결정 10(Mailpit webhook, outbox, 재시도), 실제 j-groupware 알림 센터 대상 테스트 | E5, j-groupware G22 |
 | E4 | 취소(Canceled): gateway 조각은 필요 없음 | - |
 | E6 | 완료(Done): 변경 요청 반영 확인 | - |
 
-backlog: 사용자별 받은편지함 필터, j-messenger mail 모드 연결(실제 MTA), SMTP AUTH·STARTTLS, 메일 보존 정책, OIDC 전환.
+backlog: 사용자별 받은편지함 필터, j-messenger mail 모드 연결(실제 MTA), SMTP AUTH·STARTTLS, 메일 보존 정책.
 
 ## 이전 번호 대응
 
@@ -104,4 +112,5 @@ backlog: 사용자별 받은편지함 필터, j-messenger mail 모드 연결(실
 | 2 | 3 | 7 | 4 |
 | 3 | 5 | 8 | 9 |
 | 4 | 7 | 9 | 8 |
-| 5 | 2 | - | 0 → 4장 작업 구성, 5장 요청은 모두 반영되어 삭제 |
+| 5 | 2 | 10 | 새로 추가(알림 송신) |
+| - | - | - | 0 → 4장 작업 구성, 5장 요청은 모두 반영되어 삭제 |
