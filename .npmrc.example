@@ -1,0 +1,10 @@
+# Local routing only; no credentials belong in this file.
+registry=https://registry.npmjs.org/
+@j-auth:registry=http://127.0.0.1:4873/
+@j-groupware:registry=http://127.0.0.1:4873/
+@j-messenger:registry=http://127.0.0.1:4873/
+@j-customer-auth-db:registry=http://127.0.0.1:4873/
+@j-mail:registry=http://127.0.0.1:4873/
+@j-approval:registry=http://127.0.0.1:4873/
+@j-talk:registry=http://127.0.0.1:4873/
+@j-web:registry=http://127.0.0.1:4873/
