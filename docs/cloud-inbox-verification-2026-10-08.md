@@ -26,3 +26,11 @@ Mailpit To/Cc/Bcc는 표시용 헤더다. pinned 1.31.4의 SMTP-only capture와 
 결과: `/workspace/.suite-runtime/j-mail/inbox-results.json`, `inbox-node22-results.json`, `api-check.log`, `contracts-registry.log`, `contracts-publish.log`, `api-npm-ci.log`. 이전 실패: `inbox-initial-setup-failure.json`, `inbox-diagnostic-results.json`, `inbox-native-null-failure.json`과 로그. runtime env/개인키·본문/JWT는 commit하지 않는다.
 
 ML-T02의 BFF/browser sandbox, ML-T04의 E8, ML-T05 VM/egress/systemd/설치·해지/백업은 아직 전체 통과가 아니다. E8은 첫 Received에 없는 전체 envelope 수신자 보존 및 FS-U07 수신 전 누락 기준이 필요하다. outbox/recovery/ingress proxy 정책을 임의로 추가하지 않았다.
+
+## 후속 imported sample 호환 수정
+
+[j-auth 수정 fbbb7382eb5dc4805aab4bbf5e0d3b634aef03e0](https://github.com/wnwjdals7498/j-auth/commit/fbbb7382eb5dc4805aab4bbf5e0d3b634aef03e0)의 [원인·증거](https://github.com/wnwjdals7498/j-auth/blob/fbbb7382eb5dc4805aab4bbf5e0d3b634aef03e0/docs/cloud-imported-role-compatibility-2026-10-08.md)로 기존 sample-a 회원 생성503의 원인을 수정했다. import scope 방향 오류가 login client에 동명 mail:read alias를 만들었고, 이름만 조회한 DB 매핑이 허용된 j-mail 대신 이 alias를 선택했다. 이제 카탈로그 역할 소유 client를 함께 조회하며 기존 FGAP/role/scope를 변경하지 않는다.
+
+기존 sample의 실제 생성201·canonical 회수/재부여200·wrong alias403·실제 축소 JWT mail:read와 새 실제 import/PKCE 흐름을 Node22/24 각각6개로 검증했다. 전후 managed FGAP/catalog hash가 같다. 기존 scope drift는 보존했지만 실제 축소 JWT에 정상 role이 있어 추가 실패로 단정하지 않는다. j-auth 전체69개 및 이 저장소의 실제18개 회귀는 fail/skip0으로 통과했다. 이전 미해결/실패 이력은 당시 기록이며 현재 역할 부여 문제는 해결됐다. E8/UI/VM 미완료와 구별한다.
+
+메일 회귀 결과는 `/workspace/.suite-runtime/j-mail/auth-compat-regression-results.json`이다. 메일 코드·contracts0.1.0은 변경하거나 다시 게시하지 않았다.
