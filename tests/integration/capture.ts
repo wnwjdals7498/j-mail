@@ -18,10 +18,14 @@ export async function createCapture(
   tenant: string,
   httpPort = 0,
   smtpPort = 0,
+  fixtureTenants: readonly string[] = [tenant],
 ) {
   if (process.env.JML_TEST_RUNTIME !== "isolated-cloud")
     throw new Error("Isolated mail fixture required. No skip.");
   assertCustomerTenantId(tenant);
+  if (!fixtureTenants.length || fixtureTenants.length > 2)
+    throw new Error("Invalid isolated mixed fixture.");
+  for (const allowed of fixtureTenants) assertCustomerTenantId(allowed);
   const root = await mkdtemp("/workspace/.suite-runtime/j-mail/cap-");
   const name = "j-mail-capture-" + randomUUID().slice(0, 8),
     sockets = new Set<Socket>();
@@ -62,7 +66,7 @@ export async function createCapture(
       "--env",
       `MP_UI_BIND_ADDR=unix:${root}/http.sock:0600`,
       "--env",
-      `MP_SMTP_ALLOWED_RECIPIENTS=(?i)^[^@\\s<>]+@${tenant}\\.jgw\\.test$`,
+      `MP_SMTP_ALLOWED_RECIPIENTS=(?i)^[^@\\s<>]+@(${fixtureTenants.map((t) => t + "\\.jgw\\.test").join("|")})$`,
       "--env",
       "MP_SMTP_IGNORE_REJECTED_RECIPIENTS=false",
       "--env",

@@ -17,7 +17,6 @@
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
-  "private": true,
   "publishConfig": {
     "registry": "http://127.0.0.1:4873/"
   }
