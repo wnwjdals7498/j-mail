@@ -48,4 +48,4 @@
 
 Mailpit v1.31.4 [공식 SMTP source](https://github.com/axllent/mailpit/blob/v1.31.4/internal/smtpd/main.go)에서 accepted SMTP `to []string`가 message-ID 저장 handler로 전달되며, [SMTP server source](https://github.com/axllent/mailpit/blob/v1.31.4/internal/smtpd/smtpd.go)는 저장 ID의 `queued as` response 형식을 정의한다. j-mail capture adapter는 full envelope를 먼저 보존하고 고유 marker로 webhook ID와 대응한다. 이 source binding은 외부 설정 없이는 켜지지 않고 제품 Compose를 변경하지 않는다.
 
-E8 webhook은 native ID와 capture mapping을 검증한 뒤 outbox transaction commit 후에만 204를 반환한다. 현재 개발 unit 시험은 adapter framing/marker·multi-username payload·fail-closed와 단위 outbox 호출을 확인한다. 실제 Mailpit + jgw_mail + GWA 수신 통합은 migration 통합 후 실행 gate이며 아직 ML-T04 완료로 보지 않는다. 보존 정책·개인별 필터·실제 MTA/mail 인증·SMTP AUTH/STARTTLS는 기존 이후 범위다.
+E8 webhook은 native ID와 capture mapping을 검증한 뒤 outbox transaction commit 후에만 204를 반환한다. Node 22·24에서 unit 검사와 실제 SMTP/Mailpit HTTP webhook + jgw_mail + GWA 수신 통합을 수행했다. 다중 수신자·동일 사건 중복 제거·outbox 적재·GWA 장애 후 재시도 검증과 전체 통합시험 19개가 각각 통과했다. [실행 근거](cloud-mail-notification-implementation-2026-10-09.md)와 운영 binding·webhook 도착 전 유실·실제 VM 인수의 미실행 경계를 구분한다. 보존 정책·개인별 필터·실제 MTA/mail 인증·SMTP AUTH/STARTTLS는 기존 이후 범위다.
