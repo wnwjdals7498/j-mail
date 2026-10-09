@@ -69,9 +69,19 @@ test(
         "Contracts must actually be published in the local registry.",
       );
       const metadata = await response.json(),
-        manifest = metadata.versions["0.1.0"];
+        version = JSON.parse(
+          await readFile(
+            path.join(root, "packages/contracts/package.json"),
+            "utf8",
+          ),
+        ).version,
+        manifest = metadata.versions[version];
+      assert.equal(
+        metadata.versions["0.1.0"].dist.integrity,
+        "sha512-Eg800qawj5W06sISNI/cH/TfnJjRjeG9CjZad3YaQp4IqWt9dl0wgUTGYaQPpVz7FLMexua1UGoe8q3MMt1Eog==",
+      );
       assert.equal(manifest.name, "@j-mail/contracts");
-      assert.equal(manifest.version, "0.1.0");
+      assert.equal(manifest.version, version);
       const packed = JSON.parse(
         await run(
           [
@@ -97,7 +107,7 @@ test(
           name: "isolated-mail-consumer",
           private: true,
           type: "module",
-          dependencies: { "@j-mail/contracts": "0.1.0" },
+          dependencies: { "@j-mail/contracts": version },
         }),
       );
       await run(["install"], temporary, profile);
@@ -105,7 +115,7 @@ test(
         await readFile(path.join(temporary, "package-lock.json"), "utf8"),
       );
       const entry = lock.packages["node_modules/@j-mail/contracts"];
-      assert.equal(entry.version, "0.1.0");
+      assert.equal(entry.version, version);
       assert.equal(new URL(entry.resolved).origin, new URL(registry).origin);
       assert.equal(entry.integrity, manifest.dist.integrity);
       const contracts = await import(
@@ -113,6 +123,15 @@ test(
       );
       assert.equal(contracts.MAIL_PATHS.messages, "/mail/messages");
       assert.equal(contracts.MAIL_LIMITS.page, 100);
+      assert.equal(contracts.MAILPIT_IMAGE.includes("v1.31.4@sha256:"), true);
+      assert.equal(
+        contracts.mailpitEnvironment("customer-a", {
+          database: "/data/mailpit.db",
+          smtp: "127.0.0.1:54312",
+          http: "127.0.0.1:54311",
+        }).MP_MAX_MESSAGES,
+        "0",
+      );
       assert.equal(contracts.MAIL_PATHS.message("id"), "/mail/messages/id");
     } finally {
       await rm(temporary, { recursive: true, force: true });
