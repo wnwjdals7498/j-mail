@@ -19,10 +19,25 @@ export async function createCapture(
   httpPort = 0,
   smtpPort = 0,
   fixtureTenants: readonly string[] = [tenant],
+  options: { webhookUrl?: string } = {},
 ) {
   if (process.env.JML_TEST_RUNTIME !== "isolated-cloud")
     throw new Error("Isolated mail fixture required. No skip.");
   assertCustomerTenantId(tenant);
+  let webhookUrl: URL | undefined;
+  if (options.webhookUrl) {
+    webhookUrl = new URL(options.webhookUrl);
+    if (
+      webhookUrl.protocol !== "http:" ||
+      webhookUrl.hostname !== "127.0.0.1" ||
+      !webhookUrl.port ||
+      webhookUrl.port === "3001" ||
+      webhookUrl.pathname !== "/internal/mailpit/webhook" ||
+      webhookUrl.search ||
+      webhookUrl.hash
+    )
+      throw new Error("Isolated webhook must target an explicit loopback URL.");
+  }
   if (!fixtureTenants.length || fixtureTenants.length > 2)
     throw new Error("Invalid isolated mixed fixture.");
   for (const allowed of fixtureTenants) assertCustomerTenantId(allowed);
@@ -45,7 +60,7 @@ export async function createCapture(
       "--name",
       name,
       "--network",
-      "none",
+      webhookUrl ? "host" : "none",
       "--read-only",
       "--user",
       `${process.getuid!()}:${process.getgid!()}`,
@@ -54,7 +69,7 @@ export async function createCapture(
       "--security-opt",
       "no-new-privileges",
       "--log-driver",
-      "none",
+      webhookUrl ? "json-file" : "none",
       "--mount",
       `type=bind,source=${root},target=${root}`,
       "--tmpfs",
@@ -81,8 +96,15 @@ export async function createCapture(
       "MP_MAX_MESSAGE_SIZE=4",
       "--env",
       "MP_ALLOWED_HOSTS=127.0.0.1,localhost",
-      "--env",
-      "MP_QUIET=true",
+      ...(webhookUrl ? [] : ["--env", "MP_QUIET=true"]),
+      ...(webhookUrl
+        ? [
+            "--env",
+            `MP_WEBHOOK_URL=${webhookUrl.toString()}`,
+            "--env",
+            "MP_WEBHOOK_LIMIT=0",
+          ]
+        : []),
       image,
     ]);
     started = true;
@@ -209,8 +231,10 @@ export async function createCapture(
     return {
       root,
       origin,
+      smtpPort: smtp,
       api,
       send,
+      logs: () => (webhookUrl ? docker(["logs", name]) : ""),
       close,
       restart: async () => {
         for (const socket of sockets) socket.destroy();

@@ -123,7 +123,8 @@ export class MailpitClient {
       receivedAt,
     });
   }
-  private async headers(id: string, signal: AbortSignal) {
+  async messageHeaders(id: string, signal = AbortSignal.timeout(5000)) {
+    if (!new RegExp(MAIL_ID_PATTERN).test(id)) throw missing();
     return parseMailHeaders(
       await this.read(`/api/v1/message/${id}/headers`, signal, true),
     );
@@ -174,7 +175,7 @@ export class MailpitClient {
               row = rows[i];
             if (!row) return;
             const receipt = smtpReceipt(
-              await this.headers(String(row.ID), signal),
+              await this.messageHeaders(String(row.ID), signal),
             );
             allowed[i] = receipt?.tenant === this.tenant;
           }
@@ -202,7 +203,7 @@ export class MailpitClient {
     if (!new RegExp(MAIL_ID_PATTERN).test(id)) throw missing();
     try {
       const signal = AbortSignal.timeout(5000),
-        headers = await this.headers(id, signal),
+        headers = await this.messageHeaders(id, signal),
         receipt = smtpReceipt(headers);
       if (receipt?.tenant !== this.tenant) throw missing();
       // GET detail marks native Read. Do not issue it before readonly ownership check.

@@ -96,8 +96,13 @@ describe("actual mail capture/SMTP policy and dedicated PostgreSQL foundation", 
     const ledger = await pool.query(
       "SELECT name,checksum FROM schema_migrations",
     );
-    expect(ledger.rows).toHaveLength(1);
-    expect(ledger.rows[0]!.checksum).toMatch(/^[a-f0-9]{64}$/);
+    expect(ledger.rows.map((row) => row.name).sort()).toEqual([
+      "001-mail-foundation.sql",
+      "002-mail-notifications.sql",
+    ]);
+    expect(
+      ledger.rows.every((row) => /^[a-f0-9]{64}$/.test(row.checksum)),
+    ).toBe(true);
     expect(
       await readFile(
         new URL(

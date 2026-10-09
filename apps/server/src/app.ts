@@ -10,11 +10,13 @@ import type { TokenVerifier } from "@j-auth/token-verifier";
 import { MAIL_PATHS, MAIL_LIMITS, MAIL_ID_PATTERN } from "@j-mail/contracts";
 import { ApiError, unavailable, forbidden } from "./errors.js";
 import { MailpitClient } from "./mailpit.js";
+import { MailNotificationIngress } from "./mail-notifications.js";
 const ROUTES = new Set([
   "GET /health/live",
   "GET /health/ready",
   "GET /mail/messages",
   "GET /mail/messages/:id",
+  "POST /internal/mailpit/webhook",
 ]);
 export function createApp(options: {
   pool: Pool;
@@ -47,10 +49,19 @@ export function createApp(options: {
     options.tenant,
     options.mailpitFetch,
   );
+  const ingress = new MailNotificationIngress(
+    options.pool,
+    options.tenant,
+    mail,
+  );
   app.addHook("onRoute", (route) => {
     if (!ROUTES.has(`${route.method} ${route.url}`))
       throw new Error("Route must declare mail access.");
-    if (route.url.startsWith("/health/")) return;
+    if (
+      route.url.startsWith("/health/") ||
+      route.url === "/internal/mailpit/webhook"
+    )
+      return;
     route.onRequest = async (request) => {
       const auth = request.headers.authorization;
       if (
@@ -167,6 +178,31 @@ export function createApp(options: {
       },
     },
     (request) => mail.detail(request.params.id),
+  );
+  app.post(
+    "/internal/mailpit/webhook",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["ID"],
+          properties: { ID: { type: "string", pattern: MAIL_ID_PATTERN } },
+          additionalProperties: true,
+        },
+      },
+    },
+    async (request, reply) => {
+      try {
+        await ingress.receive(request.body);
+        return reply.code(204).send();
+      } catch {
+        request.log.warn({ requestId: request.id }, "Mailpit webhook deferred");
+        return reply.code(503).send({
+          code: "unavailable",
+          message: "Mail notification unavailable.",
+        });
+      }
+    },
   );
   return app;
 }

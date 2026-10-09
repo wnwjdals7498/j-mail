@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PoolConfig } from "pg";
 import { assertCustomerTenantId } from "@j-auth/contracts";
+import { notificationEndpoint } from "./mail-notifications.js";
 
 const repository = fileURLToPath(new URL("../../../", import.meta.url));
 export function required(env: NodeJS.ProcessEnv, name: string): string {
@@ -84,5 +85,26 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     tlsKey: externalFile(required(env, "JML_TLS_KEY")),
     database: loadDatabaseConfig(env),
     mailpitOrigin: mailpitOrigin(required(env, "JML_MAILPIT_URL")),
+    ...(env.JML_NOTIFICATION_URL || env.JML_NOTIFICATION_KEY
+      ? {
+          notification: {
+            url: (() => {
+              const value = required(env, "JML_NOTIFICATION_URL");
+              notificationEndpoint(value);
+              return value;
+            })(),
+            key: required(env, "JML_NOTIFICATION_KEY"),
+          },
+        }
+      : {}),
+    ...(env.JML_SMTP_CAPTURE_PORT || env.JML_MAILPIT_SMTP_PORT
+      ? {
+          smtpCapture: {
+            port: port(required(env, "JML_SMTP_CAPTURE_PORT")),
+            upstreamHost: "127.0.0.1" as const,
+            upstreamPort: port(required(env, "JML_MAILPIT_SMTP_PORT")),
+          },
+        }
+      : {}),
   };
 }
