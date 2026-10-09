@@ -11,6 +11,6 @@
     "@j-auth/token-verifier": "0.1.0",
     "fastify": "5.12.5",
     "pg": "8.23.1",
-    "@j-mail/contracts": "0.1.0"
+    "@j-mail/contracts": "0.1.1"
   }
 }

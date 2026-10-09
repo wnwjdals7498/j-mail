@@ -148,3 +148,9 @@ export function parseMailDetail(value: unknown): MailDetail {
     html: text(r.html, MAIL_LIMITS.body),
   };
 }
+
+export {
+  MAILPIT_IMAGE,
+  allowedRecipients,
+  mailpitEnvironment,
+} from "./mailpit-profile.js";
